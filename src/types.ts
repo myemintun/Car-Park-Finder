@@ -99,3 +99,38 @@ export interface AIQueryResponse {
   tips: string[];
   weather_advisory?: string;
 }
+
+export interface RawTaxiFeatureCollection {
+  type: string;
+  features: Array<{
+    type: string;
+    geometry: {
+      type: string;
+      coordinates: [number, number][]; // [longitude, latitude]
+    };
+    properties: {
+      timestamp: string;
+      taxi_count: number;
+      api_info?: {
+        status: string;
+      };
+    };
+  }>;
+}
+
+export interface TaxiHotspot {
+  area: string;
+  count: number;
+  latitude: number;
+  longitude: number;
+}
+
+export interface TaxiSummaryResponse {
+  success: boolean;
+  taxi_count: number;
+  timestamp: string;
+  coordinates: [number, number][]; // [longitude, latitude]
+  hotspots: TaxiHotspot[];
+  api_status: string;
+}
+

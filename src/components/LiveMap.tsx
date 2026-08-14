@@ -5,7 +5,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
-import { EnrichedCarpark } from '../types';
+import { EnrichedCarpark, TaxiSummaryResponse } from '../types';
 import { 
   Zap, 
   Car, 
@@ -17,7 +17,8 @@ import {
   Maximize2, 
   Minimize2, 
   Navigation,
-  Compass
+  Compass,
+  Radio
 } from 'lucide-react';
 
 interface LiveMapProps {
@@ -53,9 +54,13 @@ export const LiveMap: React.FC<LiveMapProps> = ({
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markersGroupRef = useRef<L.LayerGroup | null>(null);
+  const taxiGroupRef = useRef<L.LayerGroup | null>(null);
   const userMarkerRef = useRef<L.Marker | null>(null);
   const [activeArea, setActiveArea] = useState('All Singapore');
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showTaxis, setShowTaxis] = useState(false);
+  const [taxiData, setTaxiData] = useState<TaxiSummaryResponse | null>(null);
+  const [loadingTaxis, setLoadingTaxis] = useState(false);
 
   // Initialize Map
   useEffect(() => {
@@ -82,9 +87,65 @@ export const LiveMap: React.FC<LiveMapProps> = ({
 
       const markersGroup = L.layerGroup().addTo(map);
       markersGroupRef.current = markersGroup;
+
+      const taxiGroup = L.layerGroup().addTo(map);
+      taxiGroupRef.current = taxiGroup;
+
       mapInstanceRef.current = map;
     }
   }, []);
+
+  // Fetch Live Taxis
+  const fetchTaxis = async () => {
+    setLoadingTaxis(true);
+    try {
+      const res = await fetch('/api/taxis');
+      const data = await res.json();
+      if (data.success) {
+        setTaxiData(data);
+      }
+    } catch (err) {
+      console.warn('Failed to load taxi availability:', err);
+    } finally {
+      setLoadingTaxis(false);
+    }
+  };
+
+  useEffect(() => {
+    if (showTaxis && !taxiData) {
+      fetchTaxis();
+    }
+  }, [showTaxis, taxiData]);
+
+  // Render Taxi Layer
+  useEffect(() => {
+    if (!mapInstanceRef.current || !taxiGroupRef.current) return;
+
+    taxiGroupRef.current.clearLayers();
+
+    if (!showTaxis || !taxiData) return;
+
+    // Render taxi coordinates (sampled)
+    taxiData.coordinates.forEach(([lng, lat]) => {
+      const taxiIcon = L.divIcon({
+        className: 'taxi-dot-marker',
+        html: `<div class="w-3 h-3 rounded-full bg-amber-400 border border-zinc-900 shadow-sm opacity-80 hover:opacity-100 hover:scale-125 transition-transform" title="Available Taxi"></div>`,
+        iconSize: [12, 12],
+        iconAnchor: [6, 6],
+      });
+
+      const marker = L.marker([lat, lng], { icon: taxiIcon });
+      marker.bindPopup(`
+        <div class="p-3 bg-white text-zinc-900 text-xs font-bold border-2 border-zinc-900 rounded-xl shadow-[3px_3px_0px_0px_rgba(24,24,27,1)]">
+          <div class="flex items-center gap-1.5 text-amber-600 font-black mb-1">
+            <span>🚕</span> Available Taxi (data.gov.sg v1)
+          </div>
+          <p class="text-[11px] text-zinc-600 font-medium">Cruising for passenger pickup.</p>
+        </div>
+      `);
+      taxiGroupRef.current?.addLayer(marker);
+    });
+  }, [showTaxis, taxiData]);
 
   // Update User Location Beacon
   useEffect(() => {
@@ -282,6 +343,28 @@ export const LiveMap: React.FC<LiveMapProps> = ({
       
       {/* Area Quick Selector Header (Bento Pills) */}
       <div className="absolute top-3 left-3 right-16 z-[400] flex items-center gap-1.5 overflow-x-auto py-1 px-2 rounded-2xl bg-zinc-900/90 backdrop-blur-md border-2 border-zinc-900 shadow-[3px_3px_0px_0px_rgba(24,24,27,1)] no-scrollbar">
+        {/* Taxi Layer Toggle */}
+        <button
+          id="btn-toggle-taxis"
+          onClick={() => setShowTaxis(!showTaxis)}
+          className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider whitespace-nowrap transition-all border-2 flex items-center gap-1.5 ${
+            showTaxis
+              ? 'bg-amber-400 text-zinc-950 border-zinc-900 shadow-[2px_2px_0px_0px_rgba(24,24,27,1)]'
+              : 'bg-zinc-800 text-zinc-300 border-zinc-700 hover:text-white hover:bg-zinc-700'
+          }`}
+          title="Toggle Singapore Live Taxis (data.gov.sg v1)"
+        >
+          <span>🚕</span>
+          <span>
+            {showTaxis
+              ? `TAXIS ON ${taxiData ? `(${taxiData.taxi_count.toLocaleString()})` : ''}`
+              : 'LIVE TAXIS'}
+          </span>
+          {loadingTaxis && <span className="animate-spin text-[10px]">⏳</span>}
+        </button>
+
+        <div className="w-[1px] h-5 bg-zinc-700 mx-1"></div>
+
         {SG_AREAS.map((area) => (
           <button
             key={area.name}
@@ -330,6 +413,12 @@ export const LiveMap: React.FC<LiveMapProps> = ({
             <span className="px-1.5 py-0.2 rounded bg-zinc-800 text-amber-300 border border-zinc-700 text-[10px] font-black">⚡ EV</span>
             <span className="text-zinc-400 font-bold uppercase text-[10px]">Charging</span>
           </div>
+          {showTaxis && (
+            <div className="flex items-center gap-1.5 animate-fadeIn">
+              <span className="w-3 h-3 rounded-full bg-amber-400 border border-zinc-900 shadow-sm"></span>
+              <span className="text-amber-300 font-bold uppercase text-[10px]">Active Taxi</span>
+            </div>
+          )}
         </div>
 
         <div className="text-[11px] text-zinc-400 font-mono font-bold uppercase hidden md:block">
