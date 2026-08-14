@@ -1,0 +1,6 @@
+{
+  "name": "SG Car Park Availability Monitor",
+  "description": "Real-time Singapore car park lot availability monitor with interactive map, vacancy tracking, rate estimates, and AI smart parking recommendations.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
