@@ -134,3 +134,57 @@ export interface TaxiSummaryResponse {
   api_status: string;
 }
 
+export interface OneMapTokenResponse {
+  access_token: string;
+  token?: string;
+  expiry_timestamp?: string;
+  source?: string;
+  expires_in?: number;
+}
+
+export interface OneMapSearchResultItem {
+  SEARCHVAL: string;
+  BLK_NO: string;
+  ROAD_NAME: string;
+  BUILDING: string;
+  ADDRESS: string;
+  POSTAL: string;
+  X: string;
+  Y: string;
+  LATITUDE: string;
+  LONGITUDE: string;
+}
+
+export interface OneMapSearchResponse {
+  found: number;
+  totalNumPages: number;
+  pageNum: number;
+  results: OneMapSearchResultItem[];
+}
+
+export interface OneMapRevGeocodeResponse {
+  GeocodeInfo: Array<{
+    BUILDING: string;
+    BLOCK: string;
+    ROAD: string;
+    POSTALCODE: string;
+    LATITUDE: string;
+    LONGITUDE: string;
+  }>;
+}
+
+export interface OneMapRouteResponse {
+  status_message: string;
+  route_summary?: {
+    start_point: string;
+    end_point: string;
+    total_time: number;
+    total_distance: number;
+    route_type?: string;
+  };
+  route_instructions?: Array<[string, string, number, string, number, string, number]>;
+  route_geometry?: string;
+  status: number;
+}
+
+
